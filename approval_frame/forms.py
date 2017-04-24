@@ -4,9 +4,31 @@ from django import forms
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from registration.forms import RegistrationFormUniqueEmail
+import logging
 
+class RegistrationFormGeneral(forms.Form):
+    zipcode = forms.CharField(
+        required=False,
+        label=_("Zip Code (for newsletter)")
+        )
+    newslettercheckbox = forms.BooleanField(required=False)
+    def __init__(self, *args, **kwargs):
+        super(RegistrationFormGeneral, self).__init__(*args, **kwargs)
+        self.cleaned_data1 = None
 
-class RegistrationFormCustom(RegistrationFormUniqueEmail):
+    def clean(self):
+        zipcode = self.cleaned_data1.get('zipcode')
+        newslettercheckbox = self.cleaned_data1.get('newslettercheckbox')
+        if newslettercheckbox:
+            if zipcode:
+                if len(zipcode) != 5 or not zipcode.isdigit():
+                    msg = "Please enter a zip code (5 digits, Non-U.S. : 00000)"
+                    self.add_error('zipcode', msg)
+            else:
+                msg = "This field is required."
+                self.add_error('zipcode', msg)
+
+class RegistrationFormCustom(RegistrationFormUniqueEmail, RegistrationFormGeneral):
     """
     This class includes registration form related, application-
     specific customizations.
@@ -22,25 +44,9 @@ class RegistrationFormCustom(RegistrationFormUniqueEmail):
         )}
     )
 
-    zipcode = forms.CharField(
-        required=False,
-        label=_("Zip Code (for newsletter)")
-        )
-
-    newslettercheckbox = forms.BooleanField(required=False)
-
     def clean(self):
-        cleaned_data = super(RegistrationFormCustom, self).clean()
-        zipcode = cleaned_data.get('zipcode')
-        newslettercheckbox = cleaned_data.get('newslettercheckbox')
-        if newslettercheckbox:
-            if zipcode:
-                if len(zipcode) != 5 or not zipcode.isdigit():
-                    msg = "Please enter a zip code (5 digits, Non-U.S. : 00000)"
-                    self.add_error('zipcode', msg)
-            else:
-                msg = "This field is required."
-                self.add_error('zipcode', msg)
+        self.cleaned_data1 = super(RegistrationFormCustom, self).clean()
+        RegistrationFormGeneral.clean(self)
 
 
 class NewUsernameForm(forms.Form):
@@ -67,26 +73,10 @@ class NewUsernameForm(forms.Form):
             "A user with that username already exists."
         )
 
-class ManageSubscriptionsForm(forms.Form):
+class ManageSubscriptionsForm(RegistrationFormGeneral, forms.Form):
     """
     This form is used to manage user subscriptions 
     """
-    zipcode = forms.CharField(
-        required=False,
-        label=_("Zip Code (for newsletter)")
-        )
-
-    newslettercheckbox = forms.BooleanField(required=False)
-
     def clean(self):
-        cleaned_data = super(ManageSubscriptionsForm, self).clean()
-        zipcode = cleaned_data.get('zipcode')
-        newslettercheckbox = cleaned_data.get('newslettercheckbox')
-        if newslettercheckbox:
-            if zipcode:
-                if len(zipcode) != 5 or not zipcode.isdigit():
-                    msg = "Please enter a zip code (5 digits, Non-U.S. : 00000)"
-                    self.add_error('zipcode', msg)
-            else:
-                msg = "This field is required."
-                self.add_error('zipcode', msg)
+        self.cleaned_data1 = super(ManageSubscriptionsForm, self).clean()
+        RegistrationFormGeneral.clean(self)
